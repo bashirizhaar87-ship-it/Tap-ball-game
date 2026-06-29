@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>25 * 4 = Tap Ball</title>
+<style>
+  *{margin:0; padding:0; box-sizing:border-box;}
+  body{background:#70c5ce; overflow:hidden; font-family: 'Arial', sans-serif;}
+  canvas{display:block; margin:0 auto; background:#70c5ce; max-width:100%; max-height:100vh;}
+  #startText{
+  position:absolute; top:35%; left:50%; transform:translate(-50%, -50%);
+  color:#fff; font-size:2.5rem; font-weight:bold; text-shadow: 3px 3px 5px #000;
+  pointer-events:none; z-index:10; text-align:center;
+  
+  /* Naya Smart Box */
+  background: rgba(0, 0, 0, 0.6);
+  padding: 20px 30px;
+  border-radius: 15px;
+  border: 2px solid #fff;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+ 0% { transform: translate(-50%, -50%) scale(1); }
+ 50% { transform: translate(-50%, -50%) scale(1.05); }
+ 100% { transform: translate(-50%, -50%) scale(1); }
+}
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="startText">Tap to Start</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const startText = document.getElementById('startText');
+
+function resize() {
+  canvas.width = 400;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+let ball = { x: 100, y: canvas.height / 2, r: 20, vy: 0 };
+let pipes = [];
+let gravity = 0.5;
+let jump = -8;
+let pipeSpeed = 2;
+let pipeGap = 150;
+let frame = 0;
+let score = 0;
+let gameStarted = false;
+let gameOver = false;
+
+function resetGame() {
+  ball.y = canvas.height / 2;
+  ball.vy = 0;
+  pipes = [];
+  score = 0;
+  frame = 0;
+  gameOver = false;
+}
+
+function addPipe() {
+  let topHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
+  pipes.push({
+    x: canvas.width,
+    top: topHeight,
+    bottom: topHeight + pipeGap,
+    passed: false
+  });
+}
+
+function update() {
+  if (!gameStarted || gameOver) return;
+
+  ball.vy += gravity;
+  ball.y += ball.vy;
+
+  if (ball.y + ball.r > canvas.height || ball.y - ball.r < 0) {
+    endGame();
+  }
+
+  if (frame % 90 === 0) {
+    addPipe();
+  }
+
+  pipes.forEach(p => {
+    p.x -= pipeSpeed;
+
+    if (ball.x + ball.r > p.x && ball.x - ball.r < p.x + 50) {
+      if (ball.y - ball.r < p.top || ball.y + ball.r > p.bottom) {
+        endGame();
+      }
+    }
+
+    if (!p.passed && p.x + 50 < ball.x) {
+      score++;
+      p.passed = true;
+    }
+  });
+
+  pipes = pipes.filter(p => p.x + 50 > 0);
+  frame++;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Pipes
+  ctx.fillStyle = '#73bf2e';
+  pipes.forEach(p => {
+    ctx.fillRect(p.x, 0, 50, p.top);
+    ctx.fillRect(p.x, p.bottom, 50, canvas.height - p.bottom);
+  });
+
+  // Ball
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#f0a500';
+  ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+
+  // Score
+  if (gameStarted) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(score, canvas.width / 2, 60);
+  }
+
+  // Game Over Screen
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.font = '20px Arial';
+    ctx.fillText('Tap to Restart', canvas.width / 2, canvas.height / 2 + 20);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+function handleTap() {
+  if (!gameStarted) {
+    gameStarted = true;
+    startText.style.display = 'none';
+    ball.vy = jump;
+    return;
+  }
+  if (gameOver) {
+    resetGame();
+    gameStarted = true;
+    startText.style.display = 'none';
+    ball.vy = jump;
+    return;
+  }
+  ball.vy = jump;
+  vibrate();
+}
+
+function endGame() {
+  gameOver = true;
+  gameStarted = false;
+}
+
+function vibrate(){ if(navigator.vibrate) navigator.vibrate(100); }
+
+document.addEventListener('click', handleTap);
+document.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(); });
+
+</script>
+</body>
+</html>
